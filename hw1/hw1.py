@@ -27,7 +27,6 @@ Projection = {}
 AvalDim = [1]
 
 for s in range(len(IDList)):
-	print(IDList[s])
 	for i in AvalDim:
 		Projection[IDList[s]] = float(Coef[str(i) + 'Const'][0]) * 1
 	for t in range(9, 0, -1):
