@@ -2,13 +2,14 @@
 
 import pandas as pd
 import numpy as np
+from copy import deepcopy
 
-def minSSE(DF, Attr, Zero, LR, IfSto=False, StopCondition=1e-5, NGroup=10, printSSE=True):
+def minSSE(DF, Attr, Zero, LR, IfSto=False, StopCondition=1e-5, \
+			StopIter = 10000, NGroup=10, printSSE=True):
 	Weight = {}
 	CurSqSig = {}
-	
 	for key in Attr:
-		Weight[key] = 1
+		Weight[key] = 0
 		CurSqSig[key] = 0
 
 	SSE = evalLoss(DF, Weight)
@@ -16,7 +17,7 @@ def minSSE(DF, Attr, Zero, LR, IfSto=False, StopCondition=1e-5, NGroup=10, print
 	if printSSE:
 		print('%i: %f' % (0, SSE))
 	i = 0
-	while abs(OldSSE - SSE) / SSE > StopCondition:
+	while abs(OldSSE - SSE) / SSE > StopCondition and i <= StopIter:
 		i += 1
 		Weight, CurSqSig = \
 			gradDece(DF, Zero, Weight, CurSqSig, LR, NGroup, IfSto)
@@ -30,14 +31,14 @@ def minSSE(DF, Attr, Zero, LR, IfSto=False, StopCondition=1e-5, NGroup=10, print
 			LR /= NGroup * 5
 		if printSSE:
 			print('%i: %f' % (i, SSE))
-	return Weight, SSE
+	return Weight
 
 def gradDece(df, Zero, weight, SqSig, LearningRate=10, nGroup=1, IfSto=False):
 	DeceRate = {}
 	NewWeight = {}
 	if IfSto:
 		for g in range(nGroup):
-			CurGrad = evalGrad(df[df['GroupID'] == g], weight)
+			CurGrad = evalGrad(df[df['GroupID'] == g], weight, Zero)
 			for key in weight:
 				if Zero[key] != 0:
 					SqSig[key] += CurGrad[key] ** 2
@@ -46,9 +47,9 @@ def gradDece(df, Zero, weight, SqSig, LearningRate=10, nGroup=1, IfSto=False):
 				else:
 					NewWeight[key] = 0
 					SqSig[key] = 1e10
-			weight = NewWeight
+			weight = deepcopy(NewWeight)
 	else:
-		CurGrad = evalGrad(df, weight)
+		CurGrad = evalGrad(df, weight, Zero)
 		for key in weight:
 			if Zero[key] != 0:
 				SqSig[key] += CurGrad[key] ** 2
@@ -61,21 +62,27 @@ def gradDece(df, Zero, weight, SqSig, LearningRate=10, nGroup=1, IfSto=False):
 	return NewWeight, SqSig
 
 def evalLoss(df, weight):
+	df.reset_index(drop=True)
 	Output = pd.DataFrame(np.zeros((len(df['PM2.5-0']), 1)), columns=['Proj'])
 	for key in weight:
-		Output['Proj'] += (df[key[1:]] ** int(key[0])) * weight[key]
+		if weight[key] != 0:
+			Output['Proj'] += df[key] * weight[key]
 	return ((df['PM2.5-0'] - Output['Proj']) ** 2).sum()
 
-def evalGrad(df, weight):
+def evalGrad(df, weight, zero):
 	Diff = pd.DataFrame(np.zeros((len(df['PM2.5-0']), 1)), columns=['Delta'])
 	Diff['Delta'] = df['PM2.5-0']
 	df = df.reset_index(drop=True)
 	for key in weight:
-		Diff['Delta'] -= weight[key] * (df[key[1:]] ** int(key[0]))
-	
+		if zero[key] != 0:
+			Diff['Delta'] -= weight[key] * df[key]
+
 	Grad = {}
 	for key in weight:
-		Grad[key] = (-2 * Diff['Delta'] * (df[key[1:]] ** int(key[0]))).sum()
+		if zero[key] != 0:
+			Grad[key] = (-2 * Diff['Delta'] * df[key]).sum()
+		else:
+			Grad[key] = 1e10
 	return Grad
 
 if __name__ == '__main__':
