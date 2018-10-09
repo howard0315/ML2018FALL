@@ -3,41 +3,59 @@
 import pandas as pd
 import sys
 import csv
+from functionForTrain import *
 
-TestDataF = sys.argv[1]
-OutputDir = sys.argv[2]
+if __name__ == '__main__':
 
-TestHeader = ['ID', 'x']
-for i in range(9, 0, -1):
-	TestHeader.append('-' + str(i))
+	TestDataF = sys.argv[1]
+	OutputDir = sys.argv[2]
 
-TestData = pd.read_csv(TestDataF, header=None)
-TestData.columns = TestHeader
-Coef = pd.read_csv('./Coefficient.csv', index_col=0)
+	TestHeader = ['ID', 'x']
+	for i in range(9, 0, -1):
+		TestHeader.append('-' + str(i))
 
-for i in range(9, 0, -1):
-	for j in range(len(TestData['-' + str(i)])):
-		if TestData['-' + str(i)][j] == 'NR':
-			TestData['-' + str(i)][j] = 0
+	RawTestData = pd.read_csv(TestDataF, header=None)
+	RawTestData.columns = TestHeader
+	Coef = pd.read_csv('./Coefficient.csv', index_col=0)
+	for i in range(9, 0, -1):
+		for j in range(len(RawTestData['-' + str(i)])):
+			if RawTestData['-' + str(i)][j] == 'NR':
+				RawTestData['-' + str(i)][j] = 0
 
-IDList = TestData['ID'].unique().tolist()
-xList = TestData['x'][0 : 18].tolist()
-Projection = {}
+	IDList = RawTestData['ID'].unique().tolist()
+	xList = RawTestData['x'][0 : 18].tolist()
+	AvalDim = [1]
+	title = [str(i) + x + '-' + str(t) \
+		for i in AvalDim for x in xList for t in range(9, 0, -1)]
+	title.append('1Const')
+	TestData = pd.DataFrame(columns = title)
 
-AvalDim = [1]
+	for s in range(len(IDList)):
+		inputData = {}
+		inputData['1Const'] = 1
+		for i in AvalDim:
+			for x in range(len(xList)):
+				for t in range(9, 0, -1):
+					inputData[str(i) + xList[x] + '-' + str(t)] = \
+						float(RawTestData['-' + str(t)][x + s * 18]) ** i
+		TestData = pd.concat([TestData, \
+			pd.DataFrame([inputData], columns=inputData.keys())], \
+						ignore_index=True, sort=True)
+	
+	SmoothList = ['1PM2.5', '1PM10', '1NO2', '1WIND_SPEED', '1O3', '1RH', \
+					'1SO2', '1NO']
+	TestData = cleanData(TestData, SmoothList, 3)
 
-for s in range(len(IDList)):
-	for i in AvalDim:
-		Projection[IDList[s]] = float(Coef[str(i) + 'Const'][0]) * 1
-	for t in range(9, 0, -1):
-		for d in range(len(xList)):
-			for i in AvalDim:
-				Projection[IDList[s]] += \
-					(float(TestData['-' + str(t)][d + s * 18]) ** i) * \
-					float(Coef[str(i) + xList[d] + '-' + str(t)])
+	Projection = {}
 
-with open(OutputDir, 'w') as f:
-	writer = csv.writer(f)
-	writer.writerow(['id', 'value'])
-	for row in Projection.items():
-		writer.writerow(row)
+	for s in range(len(IDList)):
+		Projection[IDList[s]] = 0
+		for key in list(TestData):
+			Projection[IDList[s]] += \
+				float(Coef[key][0]) * float(TestData[key][s])
+
+	with open(OutputDir, 'w') as f:
+		writer = csv.writer(f)
+		writer.writerow(['id', 'value'])
+		for row in Projection.items():
+			writer.writerow(row)

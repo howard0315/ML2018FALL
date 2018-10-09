@@ -42,16 +42,16 @@ if __name__ == '__main__':
 						TrainData.apply(lambda r: r[key] ** d, axis=1)
 	
 	for i in range(len(TrainData['PM2.5-0']) - 1, 0, -1):
-		if abs(TrainData['PM2.5-0'][i] - y_mean) > 2 * y_STD:
+		if abs(TrainData['PM2.5-0'][i] - y_mean) > 3 * y_STD:
 			print('Delete ID-%i: %f' % (i, float(TrainData['PM2.5-0'][i])))
 			TrainData.drop(TrainData.index[i])
 	TrainData.reset_index(drop=True)
 	TrainData = TrainData.assign(GroupID = lambda x: x.index % NumGroup)
 
-	# Choose candidates of columns: corr > 0.3
 	BestAttr = deepcopy(SetZero)
 	
-	TryCombin = [['1PM10-2', '1PM2.5-1']]
+	TryCombin = [['1PM10-1', '1PM2.5-1'], \
+				['1PM10-2', '1PM2.5-1']]
 	
 	AddedAttr = 0
 		
@@ -89,24 +89,6 @@ if __name__ == '__main__':
 
 	Weight = minSSE(TrainData, Attr, SetZero, 10000, False, 1e-8, 1e8, NumGroup, False)
 	FinalSSE = evalLoss(TrainData, Weight)
-
-#	wtest = [[] for _ in range(NumGroup)]
-#	pool = mp.Pool()
-#	print('MT start~')
-#	for i in range(NumGroup):
-#		wtest[i] = pool.apply_async(minSSE, \
-#			args=(TrainData[TrainData['GroupID'] != i], Attr, \
-#			AttrTest[CurrBest], 10000, False, 1e-8, 1e8, NumGroup, False))
-#	pool.close()
-#	pool.join()
-#	print('MT stop~')
-#
-#	TotalSSE = {}
-#	for i in range(NumGroup):
-#		TotalSSE[str(i)] = evalLoss(TrainData, wtest[i].get())
-#	
-#	BestSSE = min(TotalSSE, key=TotalSSE.get)
-#	Weight = deepcopy(wtest[int(BestSSE)].get())
 	print('Final SSE: %f' % FinalSSE)
 
 	print(TryCombin[int(CurrBest)])
