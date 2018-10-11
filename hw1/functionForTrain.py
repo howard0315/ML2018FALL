@@ -48,7 +48,7 @@ def evalLoss(df, weight):
 	for key in weight:
 		if weight[key] != 0:
 			Output['Proj'] += df[key] * weight[key]
-	return ((df['PM2.5-0'] - Output['Proj']) ** 2).sum()
+	return np.mean(((df['PM2.5-0'] - Output['Proj']) ** 2))
 
 def evalGrad(df, weight, zero):
 	Diff = pd.DataFrame(np.zeros((len(df['PM2.5-0']), 1)), columns=['Delta'])

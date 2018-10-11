@@ -1,54 +1,85 @@
 #-*- coding=utf-8 -*-
+'''
+Directly test total SSE
+
+'''
 
 import pandas as pd
 import numpy as np
+from copy import deepcopy
 from functionForTrain import *
 
-RawData = pd.read_csv('./data/train.csv', encoding='big5')
-mapping = {'NR': 0}
-for i in range(24):
-	RawData.replace({str(i): mapping}, inplace=True)
-PartialTitle = RawData['測項'][0:18].tolist()
+if __name__ == '__main__':
+	TrainData = pd.read_csv('./data/TrainData.csv', index_col=0)
+	TrainData['1Const'] = 1
+	
+	SetZero = {}
+	Attr = []
+	ConsideredDim = [1]
+	OriAttr = list(TrainData)
+	OriAttr.remove('PM2.5-0')
+	OriTrainData = TrainData
+	
+	y_STD = np.std(TrainData['PM2.5-0'].tolist())
+	y_mean = np.mean(TrainData['PM2.5-0'].tolist())
+	
+	for key in OriAttr:
+		print('Processing %s' % key)
+		if key == '1Const':
+			Attr.append(key)
+			SetZero[key] = 0
+		else:
+			for d in ConsideredDim:
+				Attr.append(str(d) + key)
+				SetZero[str(d) + key] = 0
+				if d == 1:
+					TrainData.rename(columns={key: str(d) + key}, inplace=True)
+				else:
+					TrainData[str(d) + key] = \
+						TrainData.apply(lambda r: r[key] ** d, axis=1)
+	
+	for i in range(len(TrainData['PM2.5-0']) - 1, 0, -1):
+		if abs(TrainData['PM2.5-0'][i] - y_mean) > 2.5 * y_STD:
+			print('Delete ID-%i: %f' % (i, float(TrainData['PM2.5-0'][i])))
+			TrainData.drop(TrainData.index[i])
+	TrainData.reset_index(drop=True)
 
-Title = [PT + '-' + str(i + 1) for i in range(9) for PT in PartialTitle]
-Title.insert(0, 'PM2.5-0')
+	BestAttr = deepcopy(SetZero)
+	
+	TryCombin = [['1PM10-2', '1PM10-6', '1PM2.5-1', '1PM2.5-2', '1PM2.5-5', \
+					'1PM2.5-6', '1NO2-2', '1NO2-4', '1WIND_SPEED-3', '1O3-2', \
+					'1O3-4', '1RH-1', '1SO2-1', '1NO-4']]
 
-TrainData = pd.DataFrame(columns = Title)
+	AddedAttr = 0
+		
+	TotalSSE = {}
+	AttrTest = {}
+	for t in range(len(TryCombin)):
+		print('\nStart a new try!: %i' % (t + 1))
+		print(TryCombin[t])
+		TotalSSE[t] = 0
+		AttrTest[t] = deepcopy(BestAttr)
+		
+		for item in TryCombin[t]:
+			AttrTest[t][item] = 1
 
-# one group contains 20 days
+		wtest = minSSE(TrainData, Attr, AttrTest[t], 100, 1e-5, 1e6, False)
+		TotalSSE[t] = evalLoss(TrainData, wtest)
+		print('SSE: %f' % TotalSSE[t])
+		print('Weight:')
+		for key in TryCombin[t]:
+			print('\t%s: %f' % (key, wtest[key]))
+	
+	CurrBest = min(TotalSSE, key=TotalSSE.get)
+	SetZero = deepcopy(AttrTest[CurrBest])
+	BestSSE = TotalSSE[CurrBest]
+	Weight = minSSE(TrainData, Attr, SetZero, 100, 1e-9, 1e8, False)
+	FinalSSE = evalLoss(TrainData, Weight)
+	print('\nFinal SSE: %f' % FinalSSE)
 
-numDay = len(RawData['日期'].unique().tolist())
-hourTag = [str(i) for i in range(24)]
-
-for m in range(numDay // 20):
-	print('Processing: %i' % (m + 1))
-	MonthlyData = \
-		RawData.loc[range(m * 360, m * 360 + 18), '測項'].reset_index(drop=True)
-	for d in range(20):
-		NewDay = \
-			RawData.loc[range(m * 360 + d * 18, m * 360 + d * 18 + 18), hourTag]
-		NewDay = NewDay.reset_index(drop=True)
-		NewDay.set_axis([str(i + 24 * d) for i in range(24)], \
-			axis=1, inplace=True)
-		MonthlyData = pd.concat([MonthlyData, NewDay], axis= 1)
-	MonthlyData.set_index('測項', inplace=True)
-	SmoothList = ['PM2.5', 'PM10', 'NO2', 'WIND_SPEED', 'O3', 'RH', 'SO2', 'NO']
-	for s in SmoothList:
-		TBSmoothed = np.array(list(map(float, MonthlyData.loc[s, :].tolist())))
-		TBSmoothed = smooth(TBSmoothed, 3, 'hanning').tolist()
-		MonthlyData.loc[s, :] = TBSmoothed
-
-	for hr in range(9, 20 * 24):
-		inputData = {}
-		inputData['PM2.5-0'] = MonthlyData[str(hr)]['PM2.5']
-		for pa in range(1, 10):
-			for r in range(len(PartialTitle)):
-				inputData[PartialTitle[r] + '-' + str(pa)] = \
-					MonthlyData[str(hr - pa)][PartialTitle[r]]
-		TrainData = pd.concat([TrainData, \
-			pd.DataFrame([inputData], columns=inputData.keys())], \
-						ignore_index=True)
-
-TrainData.to_csv('./data/TrainData.csv')
-
-print(TrainData)
+	print(TryCombin[CurrBest])
+	print('Weight:')
+	for key in TryCombin[CurrBest]:
+		print('\t%s: %f' % (key, Weight[key]))
+	ResultDF = pd.DataFrame(Weight, index=[0])
+	ResultDF.to_csv('./Coefficient.csv')
