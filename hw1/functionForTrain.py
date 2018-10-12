@@ -2,10 +2,10 @@
 
 import pandas as pd
 import numpy as np
-from copy import deepcopy
 
-def minSSE(DF, Attr, Zero, LR, StopCondition=1e-5, \
-			StopIter = 10000, printSSE=True):
+def minSSE(DF, Attr, Zero, LR, StopCondition=1e-5, StopIter=10000, \
+			printSSE=True, ifStoreSSE=False, ifReg=False, Reg=0):
+	SSERecord = []
 	Weight = {}
 	CurSqSig = {}
 	for key in Attr:
@@ -20,17 +20,21 @@ def minSSE(DF, Attr, Zero, LR, StopCondition=1e-5, \
 	while abs(OldSSE - SSE) / SSE > StopCondition and i <= StopIter:
 		i += 1
 		Weight, CurSqSig = \
-			gradDece(DF, Zero, Weight, CurSqSig, LR)
+			gradDece(DF, Zero, Weight, CurSqSig, LR, ifReg, Reg)
 		OldSSE = SSE
 		SSE = evalLoss(DF, Weight)
+		SSERecord.append(SSE)
 		if printSSE:
 			print('%i: %f' % (i, SSE))
-	return Weight
+	if ifStoreSSE:
+		return Weight, SSERecord
+	else:
+		return Weight
 
-def gradDece(df, Zero, weight, SqSig, LearningRate=10):
+def gradDece(df, Zero, weight, SqSig, LearningRate=10, ifReg=False, Reg=0):
 	DeceRate = {}
 	NewWeight = {}
-	CurGrad = evalGrad(df, weight, Zero)
+	CurGrad = evalGrad(df, weight, Zero, ifReg, Reg)
 	for key in weight:
 		if Zero[key] != 0:
 			SqSig[key] += CurGrad[key] ** 2
@@ -50,21 +54,28 @@ def evalLoss(df, weight):
 			Output['Proj'] += df[key] * weight[key]
 	return np.mean(((df['PM2.5-0'] - Output['Proj']) ** 2))
 
-def evalGrad(df, weight, zero):
+def evalGrad(df, weight, zero, ifReg=False, Reg=0):
 	Diff = pd.DataFrame(np.zeros((len(df['PM2.5-0']), 1)), columns=['Delta'])
 	Diff['Delta'] = df['PM2.5-0']
 	df = df.reset_index(drop=True)
 	for key in weight:
 		if zero[key] != 0:
 			Diff['Delta'] -= weight[key] * df[key]
-
 	Grad = {}
 	for key in weight:
 		if zero[key] != 0:
 			Grad[key] = (-2 * Diff['Delta'] * df[key]).sum()
+			if ifReg:
+				Grad[key] += 2 * Reg * weight[key]
 		else:
 			Grad[key] = 1e10
 	return Grad
+
+def L2Norm(weight):
+	square = 0
+	for key in weight:
+		square += weight[key]
+	return np.sqrt(square)
 
 def cleanData(df, attrList, lenWind):
 	for attr in attrList:

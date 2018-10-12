@@ -1,0 +1,10 @@
+train.sh: 執行train.py並輸入train.csv路徑
+train.py: 根據train.csv生成./Coefficient.csv
+hw1.sh: 執行hw1.py
+hw1.py: 根據./Coefficient.csv生成輸出檔
+functionForTrain.py: train.py、hw1.py有用到的函式
+generateTrainData.py: 從原始資料生成訓練資料的函式
+plotProblem1.py: Report中所用到的程式
+trainProblem2.py: Report中所用到的程式
+trainProblem3.py: Report中所用到的程式
+Coefficient.csv: 執行完train.py所生成的weight

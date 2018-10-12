@@ -1,16 +1,16 @@
 #-*- coding=utf-8 -*-
-'''
-Directly test total SSE
-
-'''
 
 import pandas as pd
 import numpy as np
-from copy import deepcopy
+import sys
 from functionForTrain import *
+from generateTrainData import *
 
 if __name__ == '__main__':
-	TrainData = pd.read_csv('./data/TrainData.csv', index_col=0)
+	
+	DataDir = sys.argv[1]
+	
+	TrainData = generateTrainData(DataDir, True)
 	TrainData['1Const'] = 1
 	
 	SetZero = {}
@@ -43,43 +43,21 @@ if __name__ == '__main__':
 			print('Delete ID-%i: %f' % (i, float(TrainData['PM2.5-0'][i])))
 			TrainData.drop(TrainData.index[i])
 	TrainData.reset_index(drop=True)
-
-	BestAttr = deepcopy(SetZero)
 	
-	TryCombin = [['1PM10-2', '1PM10-6', '1PM2.5-1', '1PM2.5-2', '1PM2.5-5', \
+	includedAttr = ['1PM10-2', '1PM10-6', '1PM2.5-1', '1PM2.5-2', '1PM2.5-5', \
 					'1PM2.5-6', '1NO2-2', '1NO2-4', '1WIND_SPEED-3', '1O3-2', \
-					'1O3-4', '1RH-1', '1SO2-1', '1NO-4']]
-
-	AddedAttr = 0
-		
-	TotalSSE = {}
-	AttrTest = {}
-	for t in range(len(TryCombin)):
-		print('\nStart a new try!: %i' % (t + 1))
-		print(TryCombin[t])
-		TotalSSE[t] = 0
-		AttrTest[t] = deepcopy(BestAttr)
-		
-		for item in TryCombin[t]:
-			AttrTest[t][item] = 1
-
-		wtest = minSSE(TrainData, Attr, AttrTest[t], 100, 1e-5, 1e6, False)
-		TotalSSE[t] = evalLoss(TrainData, wtest)
-		print('SSE: %f' % TotalSSE[t])
-		print('Weight:')
-		for key in TryCombin[t]:
-			print('\t%s: %f' % (key, wtest[key]))
+					'1O3-4', '1RH-1', '1SO2-1', '1NO-4']
 	
-	CurrBest = min(TotalSSE, key=TotalSSE.get)
-	SetZero = deepcopy(AttrTest[CurrBest])
-	BestSSE = TotalSSE[CurrBest]
-	Weight = minSSE(TrainData, Attr, SetZero, 100, 1e-9, 1e8, False)
+	for item in includedAttr:
+		SetZero[item] = 1
+	
+	Weight = minSSE(TrainData, Attr, SetZero, 100, 1e-9, 1e8, False, False)
 	FinalSSE = evalLoss(TrainData, Weight)
 	print('\nFinal SSE: %f' % FinalSSE)
 
-	print(TryCombin[CurrBest])
+	print(includedAttr)
 	print('Weight:')
-	for key in TryCombin[CurrBest]:
+	for key in includedAttr:
 		print('\t%s: %f' % (key, Weight[key]))
 	ResultDF = pd.DataFrame(Weight, index=[0])
 	ResultDF.to_csv('./Coefficient.csv')
