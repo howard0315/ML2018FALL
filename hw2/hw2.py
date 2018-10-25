@@ -15,12 +15,24 @@ class manageData():
 	def __init__(self):
 		pass
 	
+	def oneHotEncoding(self, Xdata, titleDict):
+		for t in titleDict:
+			for k in titleDict[t]:
+				Xdata[t + '_' + titleDict[t][k]] = 0
+				Xdata.loc[Xdata[t] == k, t + '_' + titleDict[t][k]] = 1
+		return Xdata
+	
 	def scaleXTest(self, method, Xtrain, Xtest):
 		if method == 'minmax':
 			for i in list(Xtrain):
 				minX = Xtrain[i].min()
 				maxX = Xtrain[i].max()
 				Xtest[i] = (Xtest[i] - minX) / (maxX - minX)
+		elif method == 'standardization':
+			for ft in list(Xtrain):
+				meanX = Xtrain[ft].mean()
+				stdX = Xtrain[ft].std()
+				Xtest[ft] = (Xtest[ft] - meanX) / stdX + 1
 		return Xtest
 	
 	def outputData(self, Ydata):
@@ -68,11 +80,13 @@ if __name__ == '__main__':
 	Weight = Spec[0]
 	B = Spec[1]
 	ScalingMethod = Spec[2]
+	EncodingMap = Spec[3]
 	
 	Xtrain = pd.read_csv(XTrainF)
 	Ytrain = pd.read_csv(YTrainF)
 	Xtest = pd.read_csv(XTestF)
 	
+	Xtest = manageData().oneHotEncoding(Xtest, EncodingMap)
 	Xtest = manageData().scaleXTest(ScalingMethod, Xtrain, Xtest)
 	
 	Yesti = calculation().estimate(Xtest, Weight, True, B)

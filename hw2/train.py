@@ -14,43 +14,47 @@ class logistic():
 		b = 0
 		Xdata, dataAdjustment = \
 			manageData().featureScaling(scalingMethod, Xdata, consideredFeat)
+		EpochText = 'New epoch: {:>' + str(int(np.log10(N_epoch)) + 1) + 'd}'
 		print('Start training', end='')
 		for i in range(N_epoch):
 			estimatedY = calculation().estimate(Xdata, weight, ifAddB, b)
 			print('\t-lnL: {:f}'.format( \
 				calculation().negativelnL(Ydata, estimatedY)))
-			print(('New epoch: {:>' + str(int(np.log10(N_epoch)) + 1) + \
-					'd}').format((i + 1)), end='')
+			print(EpochText.format(i + 1), end='')
 			weight, b = self.calcNewWeight(Ydata, estimatedY, Xdata, \
-										weight, LR, ifAddB, b)
+										consideredFeat, weight, LR, ifAddB, b)
 		estimatedY = calculation().estimate(Xdata, weight, ifAddB, b)
-		print('\t-lnL: {:f}'.format( \
-				calculation().negativelnL(Ydata, estimatedY)))
-		print('End of training')
-		print('\nResulting weights:')
-		print('\n{:>12s}\t{:s}'.format('Feature', 'Weight'))
-		print('{:>12s}\t{:s}'.format('-------', '------'))
-		if ifAddB:
-			print('{:>12s}\t{:=9.6f}'.format('CONST', b))
-		for k in consideredFeat:
-			print('{:>12s}\t{:=9.6f}'.format(k, weight[k]))
+		self.printWeight(weight, Ydata, estimatedY, ifAddB, b)
 		return weight, b, dataAdjustment
 	
 	def generateInitialWeight(self, featName):
 		weight = {}
 		for e in featName:
-			weight[e] = 0.1
+			weight[e] = 0
 		return weight
 	
-	def calcNewWeight(self, Ydata, estiY, Xdata, weight, LR, ifB, b):
-		estiDiff = pd.DataFrame(np.zeros((len(Ydata['Y']), 1)), \
-			columns=['Y'])
-		estiDiff['Y'] = Ydata['Y'] - estiY['Y']
+	def calcNewWeight(self, Ydata, estiY, Xdata, \
+							consideredFeat, weight, LR, ifB, b):
+		estiDiff = Ydata['Y'] - estiY['Y']
 		if ifB:
-			b -= LR * (-1 * estiDiff['Y']).sum()
+			b += LR * estiDiff.sum()
+		XtimesDiff = Xdata[consideredFeat].multiply(estiDiff, axis='index')
+		XtimesDiffSUM = XtimesDiff.sum()
 		for i in weight:
-			weight[i] -= LR * (-1 * (estiDiff['Y'] * Xdata[i])).sum()
+			weight[i] += LR * XtimesDiffSUM[i]
 		return weight, b
+
+	def printWeight(self, weight, Ydata, Yesti, ifB, b):
+		print('\t-lnL: {:f}'.format( \
+				calculation().negativelnL(Ydata, Yesti)))
+		print('End of training')
+		print('\nResulting weights:')
+		print('\n{:>24s}\t{:s}'.format('Feature', 'Weight'))
+		print('{:>24s}\t{:s}'.format('-------', '------'))
+		if ifB:
+			print('{:>24s}\t{:=9.6f}'.format('CONST', b))
+		for k in weight:
+			print('{:>24s}\t{:=9.6f}'.format(k, weight[k]))
 
 class manageData():
 	def __init__(self):
@@ -60,6 +64,13 @@ class manageData():
 		Xtrain = pd.read_csv(trainXDir)
 		Ytrain = pd.read_csv(trainYDir)
 		return Xtrain, Ytrain
+	
+	def oneHotEncoding(self, Xdata, titleDict):
+		for t in titleDict:
+			for k in titleDict[t]:
+				Xdata[t + '_' + titleDict[t][k]] = 0
+				Xdata.loc[Xdata[t] == k, t + '_' + titleDict[t][k]] = 1
+		return Xdata
 	
 	def splitData(self, Xdata, Ydata, factor):
 		pass
@@ -74,6 +85,15 @@ class manageData():
 				Xdata[ft] = (Xdata[ft] - minX) / (maxX - minX)
 				scalingSpec['min'][ft] = minX
 				scalingSpec['max'][ft] = maxX
+		elif method == 'standardization':
+			scalingSpec = \
+				pd.DataFrame(index=featureName, columns=['mean', 'std'])
+			for ft in featureName:
+				meanX = Xdata[ft].mean()
+				stdX = Xdata[ft].std()
+				Xdata[ft] = (Xdata[ft] - meanX) / stdX
+				scalingSpec['mean'][ft] = meanX
+				scalingSpec['std'][ft] = stdX
 		return Xdata, scalingSpec
 
 class calculation():
@@ -91,15 +111,13 @@ class calculation():
 		return esti
 
 	def sigmoid(self, Ydata):
-		Ydata.Y = 1 + np.exp(-1 * Ydata.Y)
-		Ydata.Y = Ydata.Y.rdiv(1)
+		Ydata.Y = (1 + np.exp(-1 * Ydata.Y)).rdiv(1)
 		return Ydata
 	
 	def negativelnL(self, Ydata, estiY):
-		estilnL = pd.DataFrame(np.zeros((len(Ydata.Y), 1)), columns=['-lnL'])
-		estilnL['-lnL'] = \
+		estilnL = \
 			-(Ydata.Y * np.log(estiY.Y) + (1 - Ydata.Y) * np.log(1 - estiY.Y))
-		return estilnL['-lnL'].sum()
+		return estilnL.sum()
 
 	def avgError(self, Ydata, estimatedY, weight):
 		err = Ydata['Y'] - estimatedY['Y']
@@ -113,11 +131,27 @@ if __name__ == '__main__':
 	ModelDir = sys.argv[3]
 	
 	XD, YD = manageData().importTrain(XDataF, YDataF)
+	
+	oneHotEncodingMap = {}
+	oneHotEncodingMap['SEX'] = {1: 'male', 2: 'female'}
+	oneHotEncodingMap['EDUCATION'] = {1: 'graduate', 2: 'university', \
+										3: 'highSchool', 4: 'others'}
+	oneHotEncodingMap['MARRIAGE'] = {1: 'married', 2: 'single', 3: 'others'}
+	
+	XD = manageData().oneHotEncoding(XD, oneHotEncodingMap)
+	
 	scalingMethod = 'minmax'
 	consideredFeat = list(XD)
-	#consideredFeat = ['LIMIT_BAL', 'EDUCATION', 'MARRIAGE', 'AGE', 'PAY_0']
-	LR = 1e-4 * 2
-	NumEpoch = 5000
+	for k in oneHotEncodingMap:
+		consideredFeat.remove(k)
+	
+	dropList = ['BILL_AMT6', 'PAY_4', 'PAY_6', 'BILL_AMT4', 'BILL_AMT2', 'EDUCATION_others', 'AGE', 'MARRIAGE_single']
+	for k in dropList:
+		consideredFeat.remove(k)
+
+
+	LR = 1e-4 * 1.5
+	NumEpoch = 10000
 	AddConst = True
 	
 	finalWeight, finalB, scalingSpec = logistic().optimize(YD, XD, \
@@ -126,4 +160,4 @@ if __name__ == '__main__':
 	estimatedY = calculation().estimate(XD, finalWeight, AddConst, finalB)
 	nlnL = calculation().negativelnL(YD, estimatedY)
 	
-	np.save(ModelDir, [finalWeight, finalB, 'minmax'])
+	np.save(ModelDir, [finalWeight, finalB, scalingMethod, oneHotEncodingMap])
