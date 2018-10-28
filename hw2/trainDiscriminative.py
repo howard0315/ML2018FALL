@@ -10,51 +10,64 @@ class logistic():
 	
 	def optimize(self, Ydata, Xdata, scalingMethod, \
 					consideredFeat, LR, N_epoch, ifAddB):
-		weight = self.generateInitialWeight(consideredFeat)
+		weight, SqSiqW = self.generateInitialWeight(consideredFeat)
 		b = 0
+		SqSiqB = 0
 		Xdata, dataAdjustment = \
 			manageData().featureScaling(scalingMethod, Xdata, consideredFeat)
 		EpochText = 'New epoch: {:>' + str(int(np.log10(N_epoch)) + 1) + 'd}'
-		print('Start training', end='')
+		print('Start training')
+		
 		for i in range(N_epoch):
-			estimatedY = calculation().estimate(Xdata, weight, ifAddB, b)
-			print('\t-lnL: {:f}'.format( \
-				calculation().negativelnL(Ydata, estimatedY)))
-			print(EpochText.format(i + 1), end='')
-			weight, b = self.calcNewWeight(Ydata, estimatedY, Xdata, \
-										consideredFeat, weight, LR, ifAddB, b)
-		estimatedY = calculation().estimate(Xdata, weight, ifAddB, b)
-		self.printWeight(weight, Ydata, estimatedY, ifAddB, b)
+			estimatedY = calculation().estimate(Xdata, weight, b)
+			
+			weight, b, SqSiqW, SqSiqB = \
+				self.calcNewWeight(Ydata.Y - estimatedY.Y, Xdata, LR, \
+					weight, ifAddB, b, SqSiqW, SqSiqB)
+			
+			if i % 200 == 0:
+				print(EpochText.format(i), end='')
+				print('\t-lnL: {:f}'.format( \
+					calculation().crossEntropy(Ydata, estimatedY)))
+			
+		estimatedY = calculation().estimate(Xdata, weight, b)
+		self.printWeight(weight, consideredFeat, Ydata, estimatedY, ifAddB, b)
+		weight = self.weight2Dict(weight, consideredFeat)
 		return weight, b, dataAdjustment
 	
 	def generateInitialWeight(self, featName):
-		weight = {}
-		for e in featName:
-			weight[e] = 0
-		return weight
+		weight = np.zeros((len(featName), 1))
+		SqSiqW = np.zeros((len(featName), 1))
+		return weight, SqSiqW
 	
-	def calcNewWeight(self, Ydata, estiY, Xdata, \
-							consideredFeat, weight, LR, ifB, b):
-		estiDiff = Ydata['Y'] - estiY['Y']
+	def calcNewWeight(self, estiDiff, Xdata, LR, weight, \
+							ifB, b, SqSiqW, SqSiqB):
 		if ifB:
-			b += LR * estiDiff.sum()
-		XtimesDiff = Xdata[consideredFeat].multiply(estiDiff, axis='index')
-		XtimesDiffSUM = XtimesDiff.sum()
-		for i in weight:
-			weight[i] += LR * XtimesDiffSUM[i]
-		return weight, b
-
-	def printWeight(self, weight, Ydata, Yesti, ifB, b):
-		print('\t-lnL: {:f}'.format( \
-				calculation().negativelnL(Ydata, Yesti)))
-		print('End of training')
+			SqSiqB += estiDiff.sum() ** 2
+			b += LR / np.sqrt(SqSiqB + 1e-6) * estiDiff.sum()
+		
+		grad = np.matmul(estiDiff.transpose(), Xdata).reshape(weight.shape)
+		SqSiqW = np.add(SqSiqW, np.power(grad, 2))
+		weight = weight + LR * np.multiply(1 / np.sqrt(SqSiqW + 1e-6), grad)
+		
+		return weight, b, SqSiqW, SqSiqB
+	
+	def weight2Dict(self, weight, consideredFeat):
+		newWeight = {}
+		for i in range(len(consideredFeat)):
+			newWeight[consideredFeat[i]] = float(weight[i])
+		return newWeight
+	
+	def printWeight(self, weight, featName, Ydata, Yesti, ifB, b):
+		print('End of training\t\t', end='')
+		print('-lnL: {:f}'.format(calculation().crossEntropy(Ydata, Yesti)))
 		print('\nResulting weights:')
 		print('\n{:>24s}\t{:s}'.format('Feature', 'Weight'))
 		print('{:>24s}\t{:s}'.format('-------', '------'))
 		if ifB:
 			print('{:>24s}\t{:=9.6f}'.format('CONST', b))
-		for k in weight:
-			print('{:>24s}\t{:=9.6f}'.format(k, weight[k]))
+		for k in range(len(featName)):
+			print('{:>24s}\t{:=9.6f}'.format(featName[k], float(weight[k])))
 
 class manageData():
 	def __init__(self):
@@ -100,26 +113,20 @@ class calculation():
 	def __init__(self):
 		pass
 	
-	def estimate(self, Xdata, weight, ifB, b):
-		esti = pd.DataFrame(np.zeros((len(Xdata['LIMIT_BAL']), 1)), \
-			columns=['Y'])
-		if ifB:
-			esti['Y'] += b
-		for key in weight:
-			esti['Y'] += weight[key] * Xdata[key]
-		esti = self.sigmoid(esti)
-		return esti
+	def estimate(self, Xdata, weight, b):
+		esti = np.dot(Xdata, weight) + b
+		esti = pd.DataFrame(esti, columns=['Y'])
+		return self.sigmoid(esti)
 
 	def sigmoid(self, Ydata):
 		Ydata.Y = (1 + np.exp(-1 * Ydata.Y)).rdiv(1)
 		return Ydata
 	
-	def negativelnL(self, Ydata, estiY):
-		estilnL = \
-			-(Ydata.Y * np.log(estiY.Y) + (1 - Ydata.Y) * np.log(1 - estiY.Y))
-		return estilnL.sum()
+	def crossEntropy(self, Ydata, estiY):
+		return -(np.dot(Ydata.Y, np.log(estiY.Y)) \
+			+ np.dot(1 - Ydata.Y, np.log(1 - estiY.Y)))
 
-	def avgError(self, Ydata, estimatedY, weight):
+	def avgError(self, Ydata, estimatedY):
 		err = Ydata['Y'] - estimatedY['Y']
 		absErr = list(map(abs, err['Y'].tolist()))
 		return sum(absErr) / len(absErr)
@@ -141,23 +148,27 @@ if __name__ == '__main__':
 	XD = manageData().oneHotEncoding(XD, oneHotEncodingMap)
 	
 	scalingMethod = 'minmax'
-	consideredFeat = list(XD)
-	for k in oneHotEncodingMap:
-		consideredFeat.remove(k)
 	
-	dropList = ['BILL_AMT6', 'PAY_4', 'PAY_6', 'BILL_AMT4', 'BILL_AMT2', 'EDUCATION_others', 'AGE', 'MARRIAGE_single']
-	for k in dropList:
-		consideredFeat.remove(k)
+	consideredFeat = ['PAY_0', 'BILL_AMT1', 'PAY_AMT1', 'PAY_AMT2']
+	for i in list(XD):
+		if i not in consideredFeat:
+			XD = XD.drop(i, 1)
+	
+#	consideredFeat = list(XD)
+#	for k in oneHotEncodingMap:
+#		consideredFeat.remove(k)
+#		XD = XD.drop(k, 1)
+#	
+#	dropList = ['BILL_AMT6', 'PAY_4']
+#	for k in dropList:
+#		consideredFeat.remove(k)
+#		XD = XD.drop(k, 1)
 
-
-	LR = 1e-4 * 1.5
-	NumEpoch = 10000
+	LR = 10
+	MaxEpoch = 10000
 	AddConst = True
 	
 	finalWeight, finalB, scalingSpec = logistic().optimize(YD, XD, \
-		scalingMethod, consideredFeat, LR, NumEpoch, AddConst)
-	
-	estimatedY = calculation().estimate(XD, finalWeight, AddConst, finalB)
-	nlnL = calculation().negativelnL(YD, estimatedY)
+		scalingMethod, consideredFeat, LR, MaxEpoch, AddConst)
 	
 	np.save(ModelDir, [finalWeight, finalB, scalingMethod, oneHotEncodingMap])
