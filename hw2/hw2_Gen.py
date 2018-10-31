@@ -76,7 +76,7 @@ if __name__ == '__main__':
 	XTestF = sys.argv[3]
 	OutputF = sys.argv[4]
 	
-	Spec = np.load('./model.npy')
+	Spec = np.load('./modelGenerative.npy')
 	Weight = Spec[0]
 	B = Spec[1]
 	ScalingMethod = Spec[2]
