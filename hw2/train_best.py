@@ -170,7 +170,6 @@ if __name__ == '__main__':
 	
 	XDataF = sys.argv[1]
 	YDataF = sys.argv[2]
-	ModelDir = sys.argv[3]
 	
 	XD, YD = manageData().importTrain(XDataF, YDataF)
 	
@@ -184,15 +183,8 @@ if __name__ == '__main__':
 	
 	scalingMethod = 'minmax'
 	
-#	consideredFeat = ['PAY_0', 'BILL_AMT1', 'PAY_AMT1', 'PAY_AMT2']
-#	consideredFeat = ['LIMIT_BAL', 'PAY_0', 'BILL_AMT1',  'PAY_AMT1', \
-#						'PAY_AMT2', 'PAY_AMT3', 'PAY_AMT4']
 	consideredFeat = list(XD)
 	dropList = []
-#	dropList = ['PAY_4', 'PAY_AMT2', 'SEX_female', 'MARRIAGE_single', 'EDUCATION_others', 'MARRIAGE_others']
-#	dropList = ['BILL_AMT6', 'PAY_4']
-#	dropList = ['SEX', 'EDUCATION', 'MARRIAGE', 'SEX_female', 'MARRIAGE_single']
-#	dropList = ['EDUCATION', 'PAY_AMT3', 'EDUCATION_others', 'MARRIAGE_others']
 	for i in dropList:
 		consideredFeat.remove(i)
 
@@ -223,4 +215,5 @@ if __name__ == '__main__':
 	Yesti = calculation().estimate(Xtest, Weight, B)
 	calculation().testScore(Ytest, Yesti)
 	Weight = logistic().weight2Dict(Weight, consideredFeat)
-	np.save(ModelDir, [Weight, B, scalingMethod, oneHotEncodingMap])
+	np.save('./modelDiscriminative.npy', \
+		[Weight, B, scalingMethod, oneHotEncodingMap])

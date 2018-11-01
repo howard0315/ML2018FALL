@@ -9,7 +9,7 @@ class generative():
 		pass
 
 	def optimize(self, Ydata, Xdata, scalingMethod, consideredFeat):
-		Xdata, dataAdjustment = \
+		Xdata, _ = \
 			manageData().featureScaling(scalingMethod, Xdata, consideredFeat)
 		N1 = len(Ydata.Y[Ydata.Y == 1])
 		N2 = len(Ydata.Y[Ydata.Y == 0])
@@ -116,7 +116,6 @@ if __name__ == '__main__':
 	
 	XDataF = sys.argv[1]
 	YDataF = sys.argv[2]
-	ModelDir = sys.argv[3]
 	
 	XD, YD = manageData().importTrain(XDataF, YDataF)
 	
@@ -131,21 +130,13 @@ if __name__ == '__main__':
 	scalingMethod = 'minmax'
 	
 	consideredFeat = ['PAY_0', 'BILL_AMT1', 'PAY_AMT1', 'PAY_AMT2']
+	
 	for i in list(XD):
 		if i not in consideredFeat:
 			XD = XD.drop(i, 1)
 	
-#	consideredFeat = list(XD)
-#	for k in oneHotEncodingMap:
-#		consideredFeat.remove(k)
-#		XD = XD.drop(k, 1)
-#	
-#	dropList = ['BILL_AMT6', 'PAY_4']
-#	for k in dropList:
-#		consideredFeat.remove(k)
-#		XD = XD.drop(k, 1)
-	
 	finalWeight, finalB = \
 		generative().optimize(YD, XD, scalingMethod, consideredFeat)
 	
-	np.save(ModelDir, [finalWeight, finalB, scalingMethod, oneHotEncodingMap])
+	np.save('./modelGenerative.npy', \
+		[finalWeight, finalB, scalingMethod, oneHotEncodingMap])
