@@ -1,4 +1,5 @@
 This is HW3
+R06521504 土木所交通組 陳譽仁
 
 CNN.h5: CNN model file
 Report.pdf: Written Report
