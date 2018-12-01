@@ -1,1 +1,1 @@
-python3 test.py '/home/yurenchen/文件/ML/LocalDocument/hw3/all/test.csv' './output.csv'
+python3 test_CNN.py $1 $2

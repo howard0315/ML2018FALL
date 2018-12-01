@@ -1,1 +1,1 @@
-python3 train.py '/home/yurenchen/文件/ML/LocalDocument/hw3/all/train.csv'
+python3 train_CNN.py $1
