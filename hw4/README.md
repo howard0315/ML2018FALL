@@ -13,3 +13,5 @@
   + 訓練模式<br />
 * train_word2vec.py<br />
   + 重新訓練embedding_matrix與word2idx<br />
+* test2_x.csv<br/>
+  + 作業第四題會用到的句子<br/>
