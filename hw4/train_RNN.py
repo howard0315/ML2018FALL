@@ -152,5 +152,5 @@ if __name__ == '__main__':
 	
 	print('End of fitting!!')
 
-	model.save('./model/final_RNN.h5')
+	#model.save('./model/final_RNN.h5')
 	

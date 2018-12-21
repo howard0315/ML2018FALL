@@ -92,7 +92,7 @@ def TrainSaveW2V(LSF):
 	W2Vmodel = word2vec.Word2Vec(sentences, size=256, sg=1, workers=10)
 	print('End of Training Word2Vec!')
 	print('====================')
-	W2Vmodel.save('./W2V/W2V.model')
+	#W2Vmodel.save('./W2V/W2V.model')
 	return W2Vmodel
 
 if __name__ == '__main__':
