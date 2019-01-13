@@ -37,7 +37,10 @@ from pathlib import Path
 BATCH_SIZE = 128
 SEED = 777
 SHAPE = (256, 256, 4)
-DIR = '.'
+TrainPath = sys.argv[1]
+TrainName = sys.argv[2]
+TestPath = sys.argv[3]
+TestName = sys.argv[4]
 VAL_RATIO = 0.1 # 20% as validation
 THRESHOLD = 0.05 # due to different cost of True Positive vs False Positive, this is the probability threshold to predict the class as 'yes'
 
@@ -49,8 +52,8 @@ set_random_seed(SEED)
 
 def getTrainDataset():
     
-    path_to_train = DIR + '/train/'
-    data = pd.read_csv(DIR + '/train.csv')
+    path_to_train = TrainPath
+    data = pd.read_csv(TrainName)
 
     paths = []
     labels = []
@@ -66,8 +69,8 @@ def getTrainDataset():
 
 def getTestDataset():
     
-    path_to_test = DIR + '/test/'
-    data = pd.read_csv(DIR + '/sample_submission.csv')
+    path_to_test = TestPath
+    data = pd.read_csv(TestName)
 
     paths = []
     labels = []
@@ -612,6 +615,8 @@ def create_model_6(init):
 
 
 def draw_process(hist, index, phase):
+	pass
+	'''
     fig, ax = plt.subplots(1, 2, figsize=(15,5))
     ax[0].set_title('Model ' + str(index) + ', ' + phase + ': loss')
     ax[0].plot(hist.epoch, hist.history["loss"], label="Train loss")
@@ -622,7 +627,7 @@ def draw_process(hist, index, phase):
     ax[0].legend()
     ax[1].legend()
     plt.savefig('./process/model' + str(index) + '_' + phase + '.png')
-
+	'''
 
 # In[17]:
 
@@ -644,7 +649,7 @@ included_model = [0, 1, 2, 3, 4, 6, 7, 8]
 for i in included_model:
     model[i].compile(loss='binary_crossentropy', optimizer=Adam(1e-03), metrics=['acc',f1])
     print('\nModel ' + str(i))
-    model[i].summary(
+    model[i].summary()
 
 
 os.environ["THEANO_FLAGS"]='device=gpu0'
@@ -765,11 +770,11 @@ workers = 1 # DO NOT COMBINE MULTIPROCESSING WITH CACHE!
 
 for i in included_model:
     print('\nModel ' + str(i))
-    best_file = Path('./best' + str(i) + '.model')
+    best_file = Path('../model/best' + str(i) + '.model')
     if best_file.is_file():
         print('\tbest' + str(i) + '.model exists.')
     else:
-        checkpoint = ModelCheckpoint('./best' + str(i) + '.model', monitor='val_f1', verbose=1,                                      save_best_only=True, save_weights_only=False, mode='max', period=1)
+        checkpoint = ModelCheckpoint('../model/best' + str(i) + '.model', monitor='val_f1', verbose=1,                                      save_best_only=True, save_weights_only=False, mode='max', period=1)
         hist = model[i].fit_generator(
             tg,
             steps_per_epoch=len(tg),
@@ -790,14 +795,14 @@ for i in included_model:
 
 for i in included_model:
     print('\nModel ' + str(i))
-    model_file = Path('./tuned' + str(i) + '.model')
+    model_file = Path('../model/tuned' + str(i) + '.model')
     if model_file.is_file():
         print('\ttuned' + str(i) + '.model exists.')
     else:
         # fine-tuning for DNN
 
-        model[i] = load_model('./best' + str(i) + '.model', custom_objects={'f1': f1}) #, 'f1_loss': f1_loss})
-        checkpoint = ModelCheckpoint('./tuned' + str(i) + '.model', monitor='val_f1', verbose=1,                                          save_best_only=True, save_weights_only=False, mode='max', period=1)
+        model[i] = load_model('../model/model/best' + str(i) + '.model', custom_objects={'f1': f1}) #, 'f1_loss': f1_loss})
+        checkpoint = ModelCheckpoint('../model/tuned' + str(i) + '.model', monitor='val_f1', verbose=1,                                          save_best_only=True, save_weights_only=False, mode='max', period=1)
 
         for layer in model[i].layers:
             layer.trainable = False
@@ -830,14 +835,14 @@ for i in included_model:
 
 for i in included_model:
     print('\nmodel ' + str(i))
-    model_file = Path('./tuned_again' + str(i) + '.model')
+    model_file = Path('../model/tuned_again' + str(i) + '.model')
     if model_file.is_file():
         print('\ttuned_again' + str(i) + '.model exists.')
     else:
         # fine-tuning for CNN
 
-        model[i] = load_model('./tuned' + str(i) + '.model', custom_objects={'f1': f1, 'f1_loss': f1_loss})
-        checkpoint = ModelCheckpoint('./tuned_again' + str(i) + '.model', monitor='val_f1', verbose=1,                                          save_best_only=True, save_weights_only=False, mode='max', period=1)
+        model[i] = load_model('../model/tuned' + str(i) + '.model', custom_objects={'f1': f1, 'f1_loss': f1_loss})
+        checkpoint = ModelCheckpoint('../model/tuned_again' + str(i) + '.model', monitor='val_f1', verbose=1,                                          save_best_only=True, save_weights_only=False, mode='max', period=1)
 
         for layer in model[i].layers:
             layer.trainable = True
@@ -870,15 +875,15 @@ for i in included_model:
 
 for i in included_model:
     print('\nmodel ' + str(i))
-    model_file = Path('./tuned_again_again' + str(i) + '.model')
+    model_file = Path('../model/tuned_again_again' + str(i) + '.model')
     if model_file.is_file():
-        model[i] = load_model('./tuned_again_again' + str(i) + '.model', custom_objects={'f1': f1, 'f1_loss': f1_loss})
+        model[i] = load_model('../model/tuned_again_again' + str(i) + '.model', custom_objects={'f1': f1, 'f1_loss': f1_loss})
         print('\ttuned_again_again' + str(i) + '.model loaded.')
     else:
         # fine-tuning for DNN
 
-        model[i] = load_model('./tuned_again' + str(i) + '.model', custom_objects={'f1': f1, 'f1_loss': f1_loss})
-        checkpoint = ModelCheckpoint('./tuned_again_again' + str(i) + '.model', monitor='val_f1', verbose=1,                                          save_best_only=True, save_weights_only=False, mode='max', period=1)
+        model[i] = load_model('../model/tuned_again' + str(i) + '.model', custom_objects={'f1': f1, 'f1_loss': f1_loss})
+        checkpoint = ModelCheckpoint('../model/tuned_again_again' + str(i) + '.model', monitor='val_f1', verbose=1,                                          save_best_only=True, save_weights_only=False, mode='max', period=1)
 
         for layer in model[i].layers:
             layer.trainable = False
@@ -905,4 +910,4 @@ for i in included_model:
         )
         draw_process(hist, i, 'phase_4')
 
-
+print('End of training.')

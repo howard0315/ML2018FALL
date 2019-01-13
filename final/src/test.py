@@ -35,7 +35,11 @@ from pathlib import Path
 BATCH_SIZE = 128
 SEED = 777
 SHAPE = (256, 256, 4)
-DIR = '..'
+TrainPath = sys.argv[1]
+TrainName = sys.argv[2]
+TestPath = sys.argv[3]
+TestName = sys.argv[4]
+OutputFile = sys.argv[5]
 VAL_RATIO = 0.2 # 20% as validation
 THRESHOLD = 0.05 # due to different cost of True Positive vs False Positive, this is the probability threshold to predict the class as 'yes'
 
@@ -47,8 +51,8 @@ os.environ["THEANO_FLAGS"]='device=gpu0'
 
 def getTrainDataset():
     
-    path_to_train = DIR + '/train/'
-    data = pd.read_csv(DIR + '/train.csv')
+    path_to_train = TrainPath
+    data = pd.read_csv(TrainName)
 
     paths = []
     labels = []
@@ -64,8 +68,8 @@ def getTrainDataset():
 
 def getTestDataset():
     
-    path_to_test = DIR + '/test/'
-    data = pd.read_csv(DIR + '/sample_submission.csv')
+    path_to_test = TestPath
+    data = pd.read_csv(TestName)
 
     paths = []
     labels = []
@@ -225,16 +229,11 @@ pathsVal = paths[lastTrainIndex:]
 labelsVal = labels[lastTrainIndex:]
 
 model = {}
-included_model = [0, 1, 2, 3, 4, 6, 7, 8]
+included_model = [0,1,2,3,6]
 os.environ["THEANO_FLAGS"]='device=gpu0'
 
-
-
 for i in included_model:
-    model[i] = load_model(DIR+'/model/tuned_again_again' + str(i) + '.model', custom_objects={'f1': f1, 'f1_loss': f1_loss})
-
-
-included_model=[0,1,2,3,6]
+    model[i] = load_model('../model/tuned_again_again' + str(i) + '.model', custom_objects={'f1': f1, 'f1_loss': f1_loss})
 
 bestModel = model
 
@@ -292,7 +291,7 @@ for i in range(28):
 pathsTest, labelsTest = getTestDataset()
 
 testg = ProteinDataGenerator(pathsTest, labelsTest, BATCH_SIZE, SHAPE)
-submit = pd.read_csv(DIR + '/sample_submission.csv')
+submit = pd.read_csv('../sample_submission.csv')
 P = np.zeros((pathsTest.shape[0], 28))
 for i in tqdm(range(len(testg))):
     images, labels = testg[i]
@@ -317,6 +316,4 @@ for row in tqdm(range(submit.shape[0])):
     prediction.append(str_label.strip())
     
 submit['Predicted'] = np.array(prediction)
-submit.to_csv('prediction.csv', index=False)
-
-
+submit.to_csv(OutputFile, index=False)
