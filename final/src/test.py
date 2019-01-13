@@ -36,7 +36,7 @@ BATCH_SIZE = 128
 SEED = 777
 SHAPE = (256, 256, 4)
 DIR = '..'
-VAL_RATIO = 0.1 # 20% as validation
+VAL_RATIO = 0.2 # 20% as validation
 THRESHOLD = 0.05 # due to different cost of True Positive vs False Positive, this is the probability threshold to predict the class as 'yes'
 
 ia.seed(SEED)
