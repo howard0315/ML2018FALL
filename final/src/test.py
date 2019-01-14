@@ -233,7 +233,7 @@ included_model = [0,1,2,3,6]
 os.environ["THEANO_FLAGS"]='device=gpu0'
 
 for i in included_model:
-    model[i] = load_model('../model/tuned_again_again' + str(i) + '.model', custom_objects={'f1': f1, 'f1_loss': f1_loss})
+    model[i] = load_model('./model/tuned_again_again' + str(i) + '.model', custom_objects={'f1': f1, 'f1_loss': f1_loss})
 
 bestModel = model
 
