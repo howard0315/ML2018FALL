@@ -4,7 +4,7 @@ bash test.sh [Trainpath file],[Trainname],[TestPath file],[TestName],[OutputFile
 
 Trainpath file：讀取train圖片檔的路徑
 
-Trainname     ：train.csv的路徑
+Trainname     ：讀取train.csv的路徑
 
 TestPath file ：讀取test圖片檔的路徑
 
@@ -18,4 +18,4 @@ bash train.sh [Trainpath file],[Trainname]
 
 Trainpath file：讀取train圖片檔的路徑
 
-Trainname     ：train.csv的路徑
+Trainname     ：讀取train.csv的路徑
