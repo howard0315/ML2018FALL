@@ -39,8 +39,6 @@ SEED = 777
 SHAPE = (256, 256, 4)
 TrainPath = sys.argv[1]
 TrainName = sys.argv[2]
-TestPath = sys.argv[3]
-TestName = sys.argv[4]
 VAL_RATIO = 0.1 # 20% as validation
 THRESHOLD = 0.05 # due to different cost of True Positive vs False Positive, this is the probability threshold to predict the class as 'yes'
 
@@ -63,21 +61,6 @@ def getTrainDataset():
         for key in lbl:
             y[int(key)] = 1
         paths.append(os.path.join(path_to_train, name))
-        labels.append(y)
-
-    return np.array(paths), np.array(labels)
-
-def getTestDataset():
-    
-    path_to_test = TestPath
-    data = pd.read_csv(TestName)
-
-    paths = []
-    labels = []
-    
-    for name in data['Id']:
-        y = np.ones(28)
-        paths.append(os.path.join(path_to_test, name))
         labels.append(y)
 
     return np.array(paths), np.array(labels)
