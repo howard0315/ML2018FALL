@@ -12,11 +12,11 @@ Train Data Label    ：train.csv的路徑<br />
 
 
 # 本作業所使用到的套件與版本
-numpy (1.14.5)<br /><br />
+numpy (1.14.5)<br />
 Keras (2.1.6)<br />
-Pillow (5.2.0)<br /><br />
+Pillow (5.2.0)<br />
 matplotlib (3.0.2)
 pandas (0.23.4)<br />
 tqdm (4.28.1)<br />
 imgaug (0.2.6)<br />
-tensorflow-gpu (1.12.0)<br />
+tensorflow-gpu (1.12.0)
