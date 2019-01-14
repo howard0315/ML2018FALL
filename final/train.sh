@@ -1,1 +1,1 @@
-python3 ./src/train.py $1 $2 $3 $4
+python3 ./src/train.py $1 $2 
