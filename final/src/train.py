@@ -753,11 +753,11 @@ workers = 1 # DO NOT COMBINE MULTIPROCESSING WITH CACHE!
 
 for i in included_model:
     print('\nModel ' + str(i))
-    best_file = Path('../model/best' + str(i) + '.model')
+    best_file = Path('./model/best' + str(i) + '.model')
     if best_file.is_file():
         print('\tbest' + str(i) + '.model exists.')
     else:
-        checkpoint = ModelCheckpoint('../model/best' + str(i) + '.model', monitor='val_f1', verbose=1,                                      save_best_only=True, save_weights_only=False, mode='max', period=1)
+        checkpoint = ModelCheckpoint('./model/best' + str(i) + '.model', monitor='val_f1', verbose=1,                                      save_best_only=True, save_weights_only=False, mode='max', period=1)
         hist = model[i].fit_generator(
             tg,
             steps_per_epoch=len(tg),
@@ -778,14 +778,14 @@ for i in included_model:
 
 for i in included_model:
     print('\nModel ' + str(i))
-    model_file = Path('../model/tuned' + str(i) + '.model')
+    model_file = Path('./model/tuned' + str(i) + '.model')
     if model_file.is_file():
         print('\ttuned' + str(i) + '.model exists.')
     else:
         # fine-tuning for DNN
 
-        model[i] = load_model('../model/model/best' + str(i) + '.model', custom_objects={'f1': f1}) #, 'f1_loss': f1_loss})
-        checkpoint = ModelCheckpoint('../model/tuned' + str(i) + '.model', monitor='val_f1', verbose=1,                                          save_best_only=True, save_weights_only=False, mode='max', period=1)
+        model[i] = load_model('./model/model/best' + str(i) + '.model', custom_objects={'f1': f1}) #, 'f1_loss': f1_loss})
+        checkpoint = ModelCheckpoint('./model/tuned' + str(i) + '.model', monitor='val_f1', verbose=1,                                          save_best_only=True, save_weights_only=False, mode='max', period=1)
 
         for layer in model[i].layers:
             layer.trainable = False
@@ -818,14 +818,14 @@ for i in included_model:
 
 for i in included_model:
     print('\nmodel ' + str(i))
-    model_file = Path('../model/tuned_again' + str(i) + '.model')
+    model_file = Path('./model/tuned_again' + str(i) + '.model')
     if model_file.is_file():
         print('\ttuned_again' + str(i) + '.model exists.')
     else:
         # fine-tuning for CNN
 
-        model[i] = load_model('../model/tuned' + str(i) + '.model', custom_objects={'f1': f1, 'f1_loss': f1_loss})
-        checkpoint = ModelCheckpoint('../model/tuned_again' + str(i) + '.model', monitor='val_f1', verbose=1,                                          save_best_only=True, save_weights_only=False, mode='max', period=1)
+        model[i] = load_model('./model/tuned' + str(i) + '.model', custom_objects={'f1': f1, 'f1_loss': f1_loss})
+        checkpoint = ModelCheckpoint('./model/tuned_again' + str(i) + '.model', monitor='val_f1', verbose=1,                                          save_best_only=True, save_weights_only=False, mode='max', period=1)
 
         for layer in model[i].layers:
             layer.trainable = True
@@ -858,15 +858,15 @@ for i in included_model:
 
 for i in included_model:
     print('\nmodel ' + str(i))
-    model_file = Path('../model/tuned_again_again' + str(i) + '.model')
+    model_file = Path('./model/tuned_again_again' + str(i) + '.model')
     if model_file.is_file():
-        model[i] = load_model('../model/tuned_again_again' + str(i) + '.model', custom_objects={'f1': f1, 'f1_loss': f1_loss})
+        model[i] = load_model('./model/tuned_again_again' + str(i) + '.model', custom_objects={'f1': f1, 'f1_loss': f1_loss})
         print('\ttuned_again_again' + str(i) + '.model loaded.')
     else:
         # fine-tuning for DNN
 
-        model[i] = load_model('../model/tuned_again' + str(i) + '.model', custom_objects={'f1': f1, 'f1_loss': f1_loss})
-        checkpoint = ModelCheckpoint('../model/tuned_again_again' + str(i) + '.model', monitor='val_f1', verbose=1,                                          save_best_only=True, save_weights_only=False, mode='max', period=1)
+        model[i] = load_model('./model/tuned_again' + str(i) + '.model', custom_objects={'f1': f1, 'f1_loss': f1_loss})
+        checkpoint = ModelCheckpoint('./model/tuned_again_again' + str(i) + '.model', monitor='val_f1', verbose=1,                                          save_best_only=True, save_weights_only=False, mode='max', period=1)
 
         for layer in model[i].layers:
             layer.trainable = False
